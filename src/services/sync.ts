@@ -15,6 +15,38 @@ type TableName = 'notes' | 'events'
 let isSyncing = false
 let realtimeChannels: Array<{ unsubscribe: () => void }> = []
 
+// 本地字段 → 云端字段：剔除本地专用字段（synced），避免云端表无此列报错
+function toCloudPayload(tableName: TableName, record: Note | EventItem): Record<string, unknown> {
+  if (tableName === 'notes') {
+    const n = record as Note
+    return {
+      id: n.id,
+      title: n.title,
+      content: n.content,
+      tags: n.tags,
+      note_date: n.note_date,
+      is_pinned: n.is_pinned,
+      is_deleted: n.is_deleted,
+      created_at: n.created_at,
+      updated_at: n.updated_at,
+      client_updated_at: n.client_updated_at,
+    }
+  }
+  const e = record as EventItem
+  return {
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    event_date: e.event_date,
+    event_time: e.event_time,
+    remind_minutes: e.remind_minutes,
+    is_deleted: e.is_deleted,
+    created_at: e.created_at,
+    updated_at: e.updated_at,
+    client_updated_at: e.client_updated_at,
+  }
+}
+
 export function getIsSyncing(): boolean {
   return isSyncing
 }
@@ -37,8 +69,11 @@ export async function pushPendingChanges(): Promise<{ pushed: number; failed: nu
         const { error } = await supabase.from(item.table_name).delete().eq('id', item.record_id)
         if (error) throw error
       } else {
-        // upsert：确保 user_id 字段存在
-        const payload = { ...item.payload, user_id: userId }
+        // upsert：剔除本地专用字段，并确保 user_id 属于当前用户
+        const payload = {
+          ...toCloudPayload(item.table_name, item.payload as Note | EventItem),
+          user_id: userId,
+        }
         const { error } = await supabase.from(item.table_name).upsert(payload)
         if (error) throw error
       }
@@ -105,8 +140,30 @@ export async function pullRemoteChanges(): Promise<{ pulled: number }> {
     }
   }
 
+  // 对账：云端已不存在（其他设备硬删），且本地无待推送变更的记录，同步移除
+  await reconcileDeletedLocally('notes', userId, remoteNotes ?? [])
+  await reconcileDeletedLocally('events', userId, remoteEvents ?? [])
+
   await setSyncState({ last_pull_at: new Date().toISOString() })
   return { pulled }
+}
+
+// ====== 云端删除对账：删除本地已同步但云端不存在的记录 ======
+async function reconcileDeletedLocally(
+  tableName: TableName,
+  userId: string,
+  remoteRows: Array<{ id: string }>,
+): Promise<void> {
+  const table = tableName === 'notes' ? db.notes : db.events
+  const locals = await table.toArray()
+  const remoteIds = new Set(remoteRows.map((r) => r.id))
+  for (const local of locals) {
+    if (local.user_id !== userId || !local.synced) continue
+    if (remoteIds.has(local.id)) continue
+    const pending = await db.syncQueue.where('record_id').equals(local.id).count()
+    if (pending > 0) continue
+    await table.delete(local.id)
+  }
 }
 
 // ====== 完整同步 ======
@@ -127,7 +184,21 @@ export async function fullSync(): Promise<{ pushed: number; pulled: number; fail
 export function subscribeRealtime(onChange: () => void): () => void {
   if (!isSupabaseConfigured || !supabase) return () => {}
 
+  // 避免重复订阅（重复登录会叠加 channel）
+  unsubscribeAllRealtime()
+
   const handlePayload = async (tableName: TableName, payload: any) => {
+    // 其他设备硬删除：本地无待推送变更时同步移除
+    if (payload.eventType === 'DELETE') {
+      const recordId = payload.old?.id
+      if (!recordId) return
+      const pending = await db.syncQueue.where('record_id').equals(recordId).count()
+      if (pending > 0) return // 本地还有未推送的变更，保留
+      const table = tableName === 'notes' ? db.notes : db.events
+      await table.delete(recordId)
+      onChange()
+      return
+    }
     const record = payload.new
     if (!record || !record.id) return
     const table = tableName === 'notes' ? db.notes : db.events

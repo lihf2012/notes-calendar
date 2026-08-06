@@ -23,21 +23,24 @@ async function bootstrap() {
   const settings = useSettingsStore()
   settings.initTheme()
 
+  let notes: ReturnType<typeof useNotesStore> | null = null
+  let events: ReturnType<typeof useEventsStore> | null = null
+
   try {
     const auth = useAuthStore()
     await auth.init()
-  } catch (e) {
-    console.error('[bootstrap] auth init failed', e)
-  }
-
-  let notes: ReturnType<typeof useNotesStore> | null = null
-  let events: ReturnType<typeof useEventsStore> | null = null
-  try {
     notes = useNotesStore()
     events = useEventsStore()
     await Promise.all([notes.loadAll(), events.loadAll()])
+    // 登录状态下启动时自动全量同步
+    if (auth.isLoggedIn) {
+      const { fullSync } = await import('@/services/sync')
+      fullSync()
+        .then(() => Promise.all([notes?.loadAll(), events?.loadAll()]))
+        .catch((e) => console.warn('[sync] 启动同步失败', e))
+    }
   } catch (e) {
-    console.error('[bootstrap] data load failed', e)
+    console.error('[bootstrap] auth init failed', e)
   }
 
   // 监听远端实时变更
@@ -48,6 +51,20 @@ async function bootstrap() {
     } catch (e) {
       console.error('[sync] reload failed', e)
     }
+  })
+
+  // 网络恢复时自动补同步
+  window.addEventListener('online', () => {
+    const auth = useAuthStore()
+    if (!auth.isLoggedIn) return
+    import('@/services/sync').then(({ fullSync }) =>
+      fullSync()
+        .then(() => {
+          notes?.loadAll()
+          events?.loadAll()
+        })
+        .catch((e) => console.warn('[sync] 网络恢复同步失败', e)),
+    )
   })
 
   app.mount('#app')

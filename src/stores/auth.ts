@@ -23,11 +23,15 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = { id: data.session.user.id, email: data.session.user.email ?? null }
       await onLoggedIn()
     }
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        user.value = { id: session.user.id, email: session.user.email ?? null }
-      } else {
+        if (!user.value || user.value.id !== session.user.id) {
+          user.value = { id: session.user.id, email: session.user.email ?? null }
+          await onLoggedIn()
+        }
+      } else if (event === 'SIGNED_OUT') {
         user.value = null
+        await clearSyncState()
       }
     })
     initialized.value = true

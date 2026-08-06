@@ -38,6 +38,29 @@
             </button>
             <button v-else class="action-btn" disabled>云服务未配置</button>
           </div>
+
+          <!-- 同步状态 -->
+          <template v-if="auth.isLoggedIn">
+            <div class="sync-status">
+              <div class="sync-status-row">
+                <span class="sync-label">同步状态</span>
+                <span class="sync-value" :class="{ syncing: syncing }">
+                  {{ syncing ? '同步中...' : pendingCount > 0 ? `待同步 ${pendingCount} 条` : '已同步' }}
+                </span>
+              </div>
+              <div class="sync-status-row">
+                <span class="sync-label">最后同步</span>
+                <span class="sync-value">{{ lastSyncText }}</span>
+              </div>
+              <div class="sync-status-row">
+                <span class="sync-label">上次拉取</span>
+                <span class="sync-value">{{ lastPullText }}</span>
+              </div>
+              <button class="action-btn small sync-now" :disabled="syncing" @click="handleManualSync">
+                {{ syncing ? '同步中...' : '立即同步' }}
+              </button>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -121,7 +144,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useNotesStore } from '@/stores/notes'
 import { useEventsStore } from '@/stores/events'
 import { isSupabaseConfigured } from '@/services/supabase'
-import { exportAllData, importAllData, clearAllData } from '@/services/db'
+import { exportAllData, importAllData, clearAllData, getSyncState, getPendingSyncItems } from '@/services/db'
+import { fullSync, getIsSyncing } from '@/services/sync'
 import { ensureNotificationPermission, canNotify } from '@/services/notification'
 import type { ThemeMode } from '@/types'
 
@@ -133,6 +157,10 @@ const eventsStore = useEventsStore()
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const notificationEnabled = ref(false)
+const syncing = ref(false)
+const pendingCount = ref(0)
+const lastSyncText = ref('从未同步')
+const lastPullText = ref('从未拉取')
 
 const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: '浅色' },
@@ -143,6 +171,40 @@ const themeOptions: { value: ThemeMode; label: string }[] = [
 const notificationStatus = computed(() =>
   notificationEnabled.value ? '已开启' : '点击开启',
 )
+
+async function refreshSyncStatus(): Promise<void> {
+  if (!auth.isLoggedIn) return
+  const [state, pending] = await Promise.all([getSyncState(), getPendingSyncItems()])
+  pendingCount.value = pending.length
+  syncing.value = getIsSyncing()
+  lastSyncText.value = state.last_push_at
+    ? new Date(state.last_push_at).toLocaleString()
+    : '从未同步'
+  lastPullText.value = state.last_pull_at
+    ? new Date(state.last_pull_at).toLocaleString()
+    : '从未拉取'
+}
+
+async function handleManualSync(): Promise<void> {
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    const result = await fullSync()
+    await Promise.all([notesStore.loadAll(), eventsStore.loadAll()])
+    await refreshSyncStatus()
+    if (result.failed > 0) {
+      showToast(`同步完成，${result.failed} 条失败`)
+    } else {
+      showToast('同步完成')
+    }
+  } catch (e) {
+    console.error(e)
+    showToast('同步失败，请检查网络')
+  } finally {
+    syncing.value = false
+    await refreshSyncStatus()
+  }
+}
 
 async function handleSignOut(): Promise<void> {
   try {
@@ -219,7 +281,11 @@ async function enableNotification(): Promise<void> {
 
 onMounted(() => {
   notificationEnabled.value = canNotify()
+  refreshSyncStatus()
 })
+
+// 登录状态变化时刷新同步状态
+auth.$subscribe(() => refreshSyncStatus())
 </script>
 
 <style scoped>
@@ -328,6 +394,35 @@ onMounted(() => {
 
 .account-actions {
   padding: 0 16px 16px;
+}
+
+.sync-status {
+  border-top: 0.5px solid var(--border-color);
+  padding: 8px 16px 16px;
+}
+
+.sync-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.sync-label {
+  color: var(--text-secondary);
+}
+
+.sync-value {
+  color: var(--text-primary);
+}
+
+.sync-value.syncing {
+  color: var(--app-primary);
+}
+
+.sync-now {
+  margin-top: 8px;
 }
 
 .action-btn {

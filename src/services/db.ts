@@ -78,6 +78,7 @@ export async function restoreNote(id: string): Promise<void> {
 export async function hardDeleteNote(id: string): Promise<void> {
   await db.notes.delete(id)
   await db.syncQueue.where('record_id').equals(id).delete()
+  await enqueueSync('notes', id, 'delete', { id })
 }
 
 export async function listActiveNotes(): Promise<Note[]> {
@@ -158,6 +159,7 @@ export async function softDeleteEvent(id: string): Promise<void> {
 export async function hardDeleteEvent(id: string): Promise<void> {
   await db.events.delete(id)
   await db.syncQueue.where('record_id').equals(id).delete()
+  await enqueueSync('events', id, 'delete', { id })
 }
 
 export async function listActiveEvents(): Promise<EventItem[]> {
@@ -183,6 +185,8 @@ export async function enqueueSync(
   operation: 'upsert' | 'delete',
   payload: object,
 ): Promise<void> {
+  // 同一记录的旧待同步项作废，以最新操作为准
+  await db.syncQueue.where('record_id').equals(recordId).delete()
   const item: SyncQueueItem = {
     id: generateId(),
     table_name: tableName,
