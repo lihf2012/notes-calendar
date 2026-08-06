@@ -45,8 +45,10 @@ export const useAuthStore = defineStore('auth', () => {
       // Realtime 变更触发后，由各 store 自行 reload
       window.dispatchEvent(new CustomEvent('sync:remote-change'))
     })
-    // 后台全量同步
-    fullSync().catch((e) => console.warn('[auth] 首次同步失败', e))
+    // 后台全量同步，完成后通知各 store 重新加载
+    fullSync()
+      .then(() => window.dispatchEvent(new CustomEvent('sync:remote-change')))
+      .catch((e) => console.warn('[auth] 首次同步失败', e))
   }
 
   async function signIn(email: string, password: string): Promise<{ error: string | null }> {
