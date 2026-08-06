@@ -27,5 +27,9 @@
 - **关键障碍：域名备案**——Cloudflare *.pages.dev 免备案；CloudBase 需绑定已 ICP 备案的自定义域名才能境内访问
 - 结论：用户若无已备案域名，迁移到 CloudBase 反而比 Cloudflare 麻烦
 
-## 待办
-- 等待用户确认是否开始按方案写代码开发
+## 部署状态
+- 代码已开发完成并构建通过，git 仓库已初始化（首次 commit 39 文件）
+- 部署方式：Git 自动部署到 Cloudflare Pages（用户已确认）
+- 用户有 GitHub + Cloudflare 账号
+- Supabase 暂不配置，先上线纯本地版（IndexedDB 存储）
+- 下一步：GitHub 建仓 → push → Cloudflare 连接仓库 → 自动构建部署
