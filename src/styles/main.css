@@ -1,0 +1,176 @@
+:root {
+  --app-primary: #534AB7;
+  --app-primary-light: #AFA9EC;
+  --app-primary-bg: #EEEDFE;
+  --app-success: #1D9E75;
+  --app-danger: #D85A30;
+  --app-warning: #EF9F27;
+
+  --bg-page: #f5f5f7;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f0f2;
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-on-primary: #ffffff;
+
+  --border-color: #e8e8ea;
+  --border-strong: #d0d0d4;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --sidebar-width: 220px;
+  --tabbar-height: 56px;
+  --header-height: 52px;
+}
+
+[data-theme='dark'] {
+  --app-primary: #7F77DD;
+  --app-primary-light: #534AB7;
+  --app-primary-bg: #26215C;
+  --app-success: #5DCAA5;
+  --app-danger: #F0997B;
+  --app-warning: #FAC775;
+
+  --bg-page: #141416;
+  --bg-card: #1e1e22;
+  --bg-elevated: #2a2a30;
+  --bg-hover: #2a2a30;
+
+  --text-primary: #f0f0f2;
+  --text-secondary: #a8a8ae;
+  --text-tertiary: #6e6e74;
+  --text-on-primary: #ffffff;
+
+  --border-color: #2e2e34;
+  --border-strong: #3e3e44;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: var(--app-primary);
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Vant 主题变量覆盖 */
+:root {
+  --van-primary-color: var(--app-primary);
+  --van-text-color: var(--text-primary);
+  --van-background: var(--bg-page);
+  --van-background-2: var(--bg-card);
+  --van-border-color: var(--border-color);
+  --van-cell-background: var(--bg-card);
+  --van-nav-bar-background: var(--bg-card);
+  --van-nav-bar-title-text-color: var(--text-primary);
+  --van-nav-bar-icon-color: var(--text-primary);
+  --van-tabbar-background: var(--bg-card);
+  --van-tabbar-item-text-color: var(--text-secondary);
+  --van-tabbar-item-active-color: var(--app-primary);
+  --van-popup-background: var(--bg-card);
+  --van-action-sheet-item-text-color: var(--text-primary);
+  --van-calendar-background: var(--bg-card);
+  --van-calendar-day-color: var(--text-primary);
+  --van-search-background: var(--bg-card);
+  --van-search-content-background: var(--bg-page);
+}
+
+/* 通用工具类 */
+.page-container {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.4;
+}
+
+/* md-editor-v3 暗色适配 */
+[data-theme='dark'] .md-editor {
+  --md-color: var(--text-primary);
+  --md-bk-color: var(--bg-card);
+  --md-border-color: var(--border-color);
+}
