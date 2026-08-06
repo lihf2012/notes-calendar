@@ -5,12 +5,17 @@ import { formatTime } from '@/utils/date'
 let permission: NotificationPermission = 'default'
 
 export async function ensureNotificationPermission(): Promise<boolean> {
-  if (!('Notification' in window)) return false
-  permission = Notification.permission
-  if (permission === 'granted') return true
-  if (permission === 'denied') return false
-  permission = await Notification.requestPermission()
-  return permission === 'granted'
+  if (typeof window === 'undefined' || !('Notification' in window)) return false
+  try {
+    permission = Notification.permission
+    if (permission === 'granted') return true
+    if (permission === 'denied') return false
+    permission = await Notification.requestPermission()
+    return permission === 'granted'
+  } catch (e) {
+    console.error('[notification] requestPermission failed', e)
+    return false
+  }
 }
 
 export function canNotify(): boolean {

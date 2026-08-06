@@ -7,6 +7,7 @@ import {
   getSyncState,
   setSyncState,
 } from './db'
+import { generateId } from '@/utils/date'
 import type { Note, EventItem, SyncQueueItem } from '@/types'
 
 type TableName = 'notes' | 'events'
@@ -172,7 +173,7 @@ export async function assignLocalDataToUser(userId: string): Promise<void> {
     if (!n.user_id) {
       await db.notes.update(n.id, { user_id: userId, synced: false })
       await db.syncQueue.put({
-        id: crypto.randomUUID(),
+        id: generateId(),
         table_name: 'notes',
         record_id: n.id,
         operation: 'upsert',
@@ -186,7 +187,7 @@ export async function assignLocalDataToUser(userId: string): Promise<void> {
     if (!e.user_id) {
       await db.events.update(e.id, { user_id: userId, synced: false })
       await db.syncQueue.put({
-        id: crypto.randomUUID(),
+        id: generateId(),
         table_name: 'events',
         record_id: e.id,
         operation: 'upsert',

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import type { Note, EventItem, SyncQueueItem, SyncState } from '@/types'
+import { generateId } from '@/utils/date'
 
 class AppDB extends Dexie {
   notes!: Table<Note, string>
@@ -33,7 +34,7 @@ export async function createNote(input: {
   const now = new Date().toISOString()
   const ts = Date.now()
   const note: Note = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     user_id: input.user_id ?? null,
     title: input.title ?? '',
     content: input.content ?? '',
@@ -117,7 +118,7 @@ export async function createEvent(input: {
   const now = new Date().toISOString()
   const ts = Date.now()
   const event: EventItem = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     user_id: input.user_id ?? null,
     title: input.title,
     description: input.description ?? '',
@@ -182,7 +183,7 @@ export async function enqueueSync(
   payload: object,
 ): Promise<void> {
   const item: SyncQueueItem = {
-    id: crypto.randomUUID(),
+    id: generateId(),
     table_name: tableName,
     record_id: recordId,
     operation,

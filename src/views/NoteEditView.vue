@@ -184,7 +184,7 @@ async function doSave(): Promise<void> {
     }, 2000)
   } catch (e) {
     console.error('保存失败', e)
-    showToast('保存失败')
+    showToast('保存失败: ' + (e instanceof Error ? e.message : String(e)))
   } finally {
     saving.value = false
   }
