@@ -4,7 +4,6 @@ import {
   getPendingSyncItems,
   removeSyncItem,
   markRecordSynced,
-  getSyncState,
   setSyncState,
 } from './db'
 import { generateId } from '@/utils/date'
@@ -92,7 +91,10 @@ export async function pushPendingChanges(): Promise<{ pushed: number; failed: nu
   return { pushed, failed }
 }
 
-// ====== 拉取云端增量变更 ======
+// ====== 拉取云端变更 ======
+// 个人应用数据量小，采用全量拉取 + 逐行 client_updated_at 比对（LWW），
+// 避免增量过滤（updated_at > last_pull_at）漏掉未见过但更新时间较旧的行，
+// 也保证对账逻辑基于完整云端列表。
 export async function pullRemoteChanges(): Promise<{ pulled: number }> {
   if (!isSupabaseConfigured || !supabase) return { pulled: 0 }
 
@@ -100,8 +102,6 @@ export async function pullRemoteChanges(): Promise<{ pulled: number }> {
   const userId = authData.user?.id
   if (!userId) return { pulled: 0 }
 
-  const state = await getSyncState()
-  const since = state.last_pull_at || '1970-01-01T00:00:00Z'
   let pulled = 0
 
   // 拉取笔记
@@ -109,7 +109,6 @@ export async function pullRemoteChanges(): Promise<{ pulled: number }> {
     .from('notes')
     .select('*')
     .eq('user_id', userId)
-    .gt('updated_at', since)
 
   if (!e1 && remoteNotes) {
     for (const rn of remoteNotes) {
@@ -127,7 +126,6 @@ export async function pullRemoteChanges(): Promise<{ pulled: number }> {
     .from('events')
     .select('*')
     .eq('user_id', userId)
-    .gt('updated_at', since)
 
   if (!e2 && remoteEvents) {
     for (const re of remoteEvents) {
