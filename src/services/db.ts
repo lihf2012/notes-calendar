@@ -38,7 +38,7 @@ export async function createNote(input: {
     user_id: input.user_id ?? null,
     title: input.title ?? '',
     content: input.content ?? '',
-    tags: input.tags ?? [],
+    tags: [...(input.tags ?? [])],
     note_date: input.note_date ?? null,
     is_pinned: input.is_pinned ?? false,
     is_deleted: false,
@@ -58,6 +58,7 @@ export async function updateNote(id: string, patch: Partial<Note>): Promise<void
   const updated: Note = {
     ...existing,
     ...patch,
+    tags: patch.tags ? [...patch.tags] : existing.tags,
     updated_at: new Date().toISOString(),
     client_updated_at: Date.now(),
     synced: false,
